@@ -1,0 +1,62 @@
+services:
+  msuser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - msuser-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3308/challenge_3_ms_users?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_RABBITMQ_QUEUE: msuser_queue
+
+  msnotify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    depends_on:
+      - rabbitmq
+    networks:
+      - msuser-network
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_QUEUE: msuser_queue
+
+  mysql:
+    image: mysql:8.0.39
+    command: mysqld --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: challenge_3_ms_users
+      MYSQL_TCP_PORT: 3308
+    ports:
+      - "3308:3308"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - msuser-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"     # Porta padrão do RabbitMQ para mensagens
+      - "15672:15672"   # Porta de interface de gerenciamento do RabbitMQ
+    networks:
+      - msuser-network
+
+volumes:
+  mysql-data:
+
+networks:
+  msuser-network:
+    driver: bridge
